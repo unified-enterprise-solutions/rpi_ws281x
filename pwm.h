@@ -26,10 +26,11 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+ 
+#include <stdint.h>
 
 #ifndef __PWM_H__
 #define __PWM_H__
-
 
 /*
  *

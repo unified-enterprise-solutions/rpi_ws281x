@@ -1,7 +1,7 @@
 /*
- * ws2811.h
+ * clear.c
  *
- * Copyright (c) 2014 Jeremy Garff <jer @ jers.net>
+ * Copyright (c) 2015 Matt Schneeberger <matt@unifyingsolution.com>
  *
  * All rights reserved.
  *
@@ -27,38 +27,50 @@
  *
  */
 
-#ifndef __WS2811_H__
-#define __WS2811_H__
+#include <stdio.h>
+#include <unistd.h>
+#include "ws2811.h"
 
-#include "pwm.h"
+#define ARRAY_SIZE(stuff)                        (sizeof(stuff) / sizeof(stuff[0]))
 
-#define WS2811_TARGET_FREQ                       800000   // Can go as low as 400000
+// TODO These are currently compiled in, but they should be in a config file or something
+#define WIDTH                                   8
+#define HEIGHT                                  8
+#define LED_COUNT								HEIGHT * WIDTH
 
-struct ws2811_device;
+int matrix[LED_COUNT];
 
-typedef uint32_t ws2811_led_t; //< 0x00RRGGBB
-typedef struct
+void set_matrix(int c)
 {
-    int gpionum;                                 //< GPIO Pin with PWM alternate function, 0 if unused
-    int invert;                                  //< Invert output signal
-    int count;                                   //< Number of LEDs, 0 if channel is unused
-    int brightness;                              //< Brightness value between 0 and 255
-    ws2811_led_t *leds;                          //< LED buffers, allocated by driver based on count
-} ws2811_channel_t;
+	int i;
+	for (i = 0; i < LED_COUNT; i++)
+	{
+		matrix[i] = c;
+	}
+}
 
-typedef struct
+int main(int argc, char *argv[])
 {
-    struct ws2811_device *device;                //< Private data for driver use
-    uint32_t freq;                               //< Required output frequency
-    int dmanum;                                  //< DMA number _not_ already in use
-    ws2811_channel_t channel[RPI_PWM_CHANNELS];
-} ws2811_t;
 
-int ws2811_init(ws2811_t *ws2811);               //< Initialize buffers/hardware
-void ws2811_fini(ws2811_t *ws2811);              //< Tear it all down
-int ws2811_render(ws2811_t *ws2811);             //< Send LEDs off to hardware
-int ws2811_wait(ws2811_t *ws2811);               //< Wait for DMA completion
+	// init
+	set_matrix(0);
+	setleds(matrix, NUM_LEDS);
 
-extern __attribute__ ((visibility ("default"))) int setleds(int* pixel_data, int pixel_count);
+	int brightness = 0;
+	int goingUp = 1;
+	while (1)
+	{
+		int pixelValue = ((brightness & 0xFF) << 16) + ((brightness & 0xFF) << 8) + (brightness & 0xFF);
+		set_matrix(pixelValue);
+		setleds(WIDTH, HEIGHT, matrix);
 
-#endif /* __WS2811_H__ */
+		if (brightness == 0) goingUp = 1;
+		if (brightness == 0xFF) goingUp = 0;
+
+		if (goingUp) brightness++;
+		else brightness--;
+		usleep(5000);
+	}
+
+	return 0;
+}

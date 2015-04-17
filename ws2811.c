@@ -66,6 +66,13 @@
 
 #define ARRAY_SIZE(stuff)                        (sizeof(stuff) / sizeof(stuff[0]))
 
+#define TARGET_FREQ                             WS2811_TARGET_FREQ
+#define GPIO_PIN                                18
+#define DMA                                     5
+
+// Error codes
+#define ERR_DRIVER_FAILURE						1
+#define SUCCESS									0
 
 typedef struct ws2811_device
 {
@@ -663,5 +670,76 @@ int ws2811_render(ws2811_t *ws2811)
     dma_start(ws2811);
 
     return 0;
+}
+
+int setleds(int* pixel_data, int pixel_count)
+{
+	// define ledstring structure
+	ws2811_t ledstring =
+	{
+		.freq = TARGET_FREQ,
+		.dmanum = DMA,
+		.channel =
+		{
+			[0] =
+			{
+				.gpionum = GPIO_PIN,
+				.count = pixel_count,
+				.invert = 0,
+				.brightness = 255,
+			},
+			[1] =
+			{
+				.gpionum = 0,
+				.count = 0,
+				.invert = 0,
+				.brightness = 0,
+			},
+		},
+	};
+	
+	// initialize board
+	if (board_info_init() < 0)
+    {
+        return ERR_DRIVER_FAILURE;
+    }
+	
+	// initialize ledstring structure
+	if (ws2811_init(&ledstring))
+    {
+        return ERR_DRIVER_FAILURE;
+    }
+	
+	// TODO Why is this here?
+	//if (0)
+    //{
+    //    void *p = malloc(32000000);
+    //    memset(p, 42, 32000000);
+    //    free(p);
+    //}
+	
+	// set pixel colors in ledstring
+	int i;
+	for (i = 0; i < pixel_count; i++)
+	{
+		ledstring.channel[0].leds[i] = pixel_data[i];
+	}
+
+	// TODO Why is this here?
+	//if (0)
+    //{
+	//	void *p = malloc(64000000);
+	//	memset(p, 42, 64000000);
+	//	free(p);
+	//}
+
+	if (ws2811_render(&ledstring))
+	{
+		return ERR_DRIVER_FAILURE;
+	}
+	
+	// done, clean up
+	ws2811_fini(&ledstring);
+	return SUCCESS;
 }
 

@@ -26,12 +26,6 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-
-Import(['clean_envs'])
-
-tools_env = clean_envs['userspace'].Clone()
-
-
 # Build Library
 lib_srcs = Split('''
     ws2811.c
@@ -41,19 +35,43 @@ lib_srcs = Split('''
     mailbox.c
 ''')
 
-ws2811_lib = tools_env.Library('libws2811', lib_srcs)
-tools_env['LIBS'].append(ws2811_lib)
+libs = [];
 
+ws2811_lib = Library('libws2811', lib_srcs)
+libs.append(ws2811_lib)
+
+ws2811_dll = SharedLibrary('ws2811', lib_srcs)
 
 # Test Program
-srcs = Split('''
+main_srcs = Split('''
     main.c
 ''')
 
 objs = []
-for src in srcs:
-   objs.append(tools_env.Object(src))
+for src in main_srcs:
+   objs.append(Object(src))
 
-test = tools_env.Program('test', objs + tools_env['LIBS'])
+test = Program('test', objs + libs)
 
-Default([test, ws2811_lib])
+# Clear program
+clear_srcs = Split('''
+	clear.c
+''')
+
+objs = []
+for src in clear_srcs:
+	objs.append(Object(src))
+clear = Program('clear', objs + libs)
+
+# dlltest program
+dlltest_srcs = Split('''
+	dlltest.c
+''')
+
+objs = []
+for src in dlltest_srcs:
+	objs.append(Object(src))
+dlltest = Program('dlltest', objs, LIBS = ['ws2811'], LIBPATH = ['.']);
+
+# Build everything
+Default([test, clear, ws2811_lib, ws2811_dll])
